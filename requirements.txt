@@ -9,3 +9,4 @@ httpx
 google-generativeai
 python-dotenv
 deepdiff
+streamlit

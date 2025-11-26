@@ -32,3 +32,21 @@ async def extract_bill(request: BillExtractionRequest):
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/extract-from-file", response_model=BillExtractionResponse)
+async def extract_bill_file(file: UploadFile = File(...)):
+    try:
+        content = await file.read()
+        mime_type = file.content_type
+        
+        extraction_data = extract_with_llm(content, mime_type)
+        
+        if not extraction_data:
+             raise HTTPException(status_code=500, detail="Failed to extract data using Gemini")
+             
+        return BillExtractionResponse(
+            is_success=True,
+            data=extraction_data
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
