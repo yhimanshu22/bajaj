@@ -1,17 +1,14 @@
 # Bill Extraction API
 
-A robust API to extract line items and totals from scanned bills and invoices.
+A robust API to extract line items and totals from scanned bills and invoices using Google Gemini Vision.
 
 ## Features
 - **Input**: Supports PDF, JPEG, PNG.
-- **Preprocessing**: Denoising and grayscale conversion using OpenCV.
-- **OCR**: Text extraction using Tesseract.
-- **Extraction**: Heuristic-based parsing of line items and totals.
+- **Extraction**: Powered by Google Gemini 1.5 Flash Vision.
 
 ## Requirements
 - Python 3.8+
-- Tesseract OCR (`sudo apt install tesseract-ocr`)
-- Poppler Utils (`sudo apt install poppler-utils`) - Required for PDF processing.
+- Google Gemini API Key
 
 ## Installation
 
@@ -19,11 +16,18 @@ A robust API to extract line items and totals from scanned bills and invoices.
 2. Create a virtual environment:
    ```bash
    python3 -m venv venv
-   source venv/bin/activate
+   source venv/bin/activate  # Linux/Mac
+   # or
+   .\venv\Scripts\activate   # Windows
    ```
 3. Install dependencies:
    ```bash
    pip install -r requirements.txt
+   ```
+4. Set up environment variables:
+   Create a `.env` file:
+   ```
+   GEMINI_API_KEY=your_api_key_here
    ```
 
 ## Usage
@@ -32,15 +36,17 @@ A robust API to extract line items and totals from scanned bills and invoices.
    ```bash
    uvicorn app.main:app --reload
    ```
-2. Send a POST request to `/extract` with a file:
+2. Send a POST request to `/extract-bill-data` with a JSON body:
    ```bash
-   curl -X POST "http://127.0.0.1:8000/extract" -F "file=@/path/to/bill.jpg"
+   curl -X POST "http://127.0.0.1:8000/extract-bill-data" \
+     -H "Content-Type: application/json" \
+     -d '{"document": "https://example.com/bill.jpg"}'
    ```
 
 ## API Response
 Returns a JSON object with:
-- `bill_id`: Unique ID
-- `line_items`: List of extracted items
-- `subtotals`: Detected subtotals
-- `final_total`: Final bill amount
-- `flags`: Metadata and warnings
+- `is_success`: Boolean indicating success
+- `data`: Object containing:
+  - `pagewise_line_items`: List of pages with items
+  - `total_item_count`: Total number of items
+  - `reconciled_amount`: Sum of item amounts
