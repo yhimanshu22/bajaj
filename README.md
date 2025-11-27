@@ -38,6 +38,8 @@ A robust API to extract line items and totals from scanned bills and invoices us
 
 ## Deployment
 ### Backend (Render/Railway)
+**Current Deployment:** [https://medbill-g3hr.onrender.com/](https://medbill-g3hr.onrender.com/)
+
 1.  Push code to GitHub.
 2.  Connect repository to **Render** (Web Service).
 3.  Set Build Command: `pip install -r requirements.txt`

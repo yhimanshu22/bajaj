@@ -17,8 +17,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-API_URL = "http://127.0.0.1:8000/extract-bill-data"
-
+# API_URL = "http://127.0.0.1:8000/extract-bill-data"
+API_URL = "https://medbill-g3hr.onrender.com/extract-bill-data"
 
 def pretty(item):
     """Pretty JSON helper."""
