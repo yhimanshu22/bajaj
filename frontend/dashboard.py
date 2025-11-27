@@ -4,6 +4,8 @@ import json
 from PIL import Image
 import io
 
+import os
+
 # Configure page
 st.set_page_config(page_title="Bill Extractor", layout="wide")
 
@@ -11,7 +13,10 @@ st.title("🧾 Bill Extraction Dashboard")
 
 # Sidebar configuration
 st.sidebar.header("Configuration")
-base_url = "http://127.0.0.1:8000"
+
+# Get default from env or use localhost
+default_url = os.environ.get("API_BASE_URL", "http://127.0.0.1:8000")
+base_url = st.sidebar.text_input("API Base URL", default_url)
 
 # Create tabs
 tab1, tab2 = st.tabs(["📁 Upload File", "🔗 Enter URL"])
@@ -21,6 +26,16 @@ def display_results(result):
         st.success("Extraction Successful!")
         
         data = result.get("data", {})
+        
+        # Fraud Detection Display
+        fraud = data.get("fraud_signals", {})
+        if fraud and fraud.get("is_suspicious"):
+            st.error("🚨 POTENTIAL FRAUD DETECTED")
+            for warning in fraud.get("warnings", []):
+                st.markdown(f":red[**⚠️ {warning}**]")
+        else:
+            st.success("✅ No Fraud Detected")
+
         col1, col2 = st.columns(2)
         col1.metric("Total Items", data.get("total_item_count", 0))
         col2.metric("Total Amount", f"{data.get('reconciled_amount', 0.0):.2f}")

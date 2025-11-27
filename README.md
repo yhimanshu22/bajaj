@@ -6,6 +6,11 @@ A robust API to extract line items and totals from scanned bills and invoices us
 - **Input**: Supports PDF, JPEG, PNG.
 - **Extraction**: Powered by Google Gemini 1.5 Flash Vision.
 
+## Differentiators
+- **Adaptive Image Enhancement**: Automatically enhances contrast and sharpness of uploaded images to improve OCR accuracy on low-quality documents.
+- **AI-Powered Fraud Detection**: Detects suspicious elements like inconsistent fonts, digital tampering, or whitener usage.
+- **Total Amount Validation**: Automatically cross-references the printed total against the sum of individual line items to detect calculation fraud (e.g., inflated totals).
+
 ## Requirements
 - Python 3.8+
 - Google Gemini API Key
@@ -29,6 +34,20 @@ A robust API to extract line items and totals from scanned bills and invoices us
    ```
    GEMINI_API_KEY=your_api_key_here
    ```
+
+## Deployment
+### Backend (Render/Railway)
+1.  Push code to GitHub.
+2.  Connect repository to **Render** (Web Service).
+3.  Set Build Command: `pip install -r requirements.txt`
+4.  Set Start Command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+5.  Add Environment Variable: `GEMINI_API_KEY`
+
+### Frontend (Streamlit Cloud)
+1.  Connect repository to **Streamlit Cloud**.
+2.  Select file: `frontend/dashboard.py`
+3.  Add Environment Variable in Advanced Settings:
+    -   `API_BASE_URL`: The URL of your deployed backend (e.g., `https://my-api.onrender.com`)
 
 ## Usage
 
