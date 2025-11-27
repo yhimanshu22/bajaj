@@ -10,6 +10,7 @@ A robust API to extract line items and totals from scanned bills and invoices us
 - **Adaptive Image Enhancement**: Automatically enhances contrast and sharpness of uploaded images to improve OCR accuracy on low-quality documents.
 - **AI-Powered Fraud Detection**: Detects suspicious elements like inconsistent fonts, digital tampering, or whitener usage.
 - **Total Amount Validation**: Automatically cross-references the printed total against the sum of individual line items to detect calculation fraud (e.g., inflated totals).
+- **Latency Optimization**: Smart image resizing and compression to reduce payload size and speed up AI processing without compromising accuracy.
 
 ## Requirements
 - Python 3.8+
