@@ -12,3 +12,4 @@ deepdiff
 streamlit
 Pillow
 importlib-metadata
+pyngrok

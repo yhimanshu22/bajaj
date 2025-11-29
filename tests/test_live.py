@@ -18,8 +18,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-API_URL = "http://127.0.0.1:8000/extract-bill-data"
-# API_URL = "https://medbill-g3hr.onrender.com/extract-bill-data"
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
+# API_URL = "http://127.0.0.1:8000/extract-bill-data"
+base_url = os.getenv("API_BASE_URL")
+if not base_url:
+    logger.warning("API_BASE_URL not found in .env, defaulting to localhost")
+    base_url = "http://127.0.0.1:8000"
+
+API_URL = f"{base_url}/extract-bill-data"
 
 def pretty(item):
     """Pretty JSON helper."""
@@ -56,12 +65,20 @@ def test_extraction(name, url, expected_data):
         elapsed = time.time() - start_time
         logger.info(f"⏱️ Time taken: {elapsed:.2f}s")
         
-        response.raise_for_status()
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"{name} ❌ HTTP Error: {e}")
+            logger.error(f"Response Status Code: {response.status_code}")
+            logger.error(f"Response Body: {response.text}")
+            return
+
         result = response.json()
 
         # Check success field
         if not result.get("is_success"):
             logger.error(f"{name} FAILED ❌ : API returned is_success = False")
+            logger.error(f"Full Response: {pretty(result)}")
             return
 
         data = result.get("data", {})
@@ -70,22 +87,21 @@ def test_extraction(name, url, expected_data):
         valid, msg = validate_response_structure(data)
         if not valid:
             logger.error(f"{name} ❌ INVALID SCHEMA: {msg}")
+            logger.error(f"Received Data Keys: {list(data.keys())}")
             return
 
         # 2️⃣ Extracted values
         extracted_count = data.get("total_item_count")
         expected_count = expected_data["data"]["total_item_count"]
 
-
-
         logger.info(f"📌 Count     → Expected: {expected_count} | Got: {extracted_count}")
-
 
         # 3️⃣ Per-page items
         page_items = data.get("pagewise_line_items", [])
 
         if not page_items:
             logger.error(f"{name} ❌ No pagewise_line_items found.")
+            logger.error(f"Full Data: {pretty(data)}")
             return
 
         extracted_bill_items = page_items[0]["bill_items"]
@@ -100,6 +116,8 @@ def test_extraction(name, url, expected_data):
 
             if diff:
                 logger.warning(f"❌ Item Mismatch Found:\n{pretty(diff)}")
+                # Log full extracted items for debugging
+                logger.info(f"Full Extracted Items:\n{pretty(extracted_bill_items)}")
             else:
                 logger.info("✅ All extracted items match expected list EXACTLY!")
 
@@ -110,9 +128,12 @@ def test_extraction(name, url, expected_data):
             logger.info(f"\n{name} PASSED ✅\n")
         else:
             logger.warning(f"\n{name} FAILED ❌ : Mismatch in count or total\n")
+            logger.warning(f"Expected Count: {expected_count}, Got: {extracted_count}")
 
     except Exception as e:
-        logger.error(f"{name} Error: {e}")
+        logger.error(f"{name} ❌ Unexpected Error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
 
 
 if __name__ == "__main__":
