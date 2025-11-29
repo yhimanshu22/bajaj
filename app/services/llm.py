@@ -2,7 +2,7 @@ import google.generativeai as genai
 import os
 import json
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 import re
 
 logger = logging.getLogger(__name__)
@@ -34,13 +34,13 @@ def sanitize_json(raw: str) -> str:
     return raw
 
 
-def extract_with_llm(file_content: bytes, mime_type: str) -> Optional[Dict[str, Any]]:
+def extract_with_llm(file_content: bytes, mime_type: str) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, int]]]:
     """Extract bill data using Gemini Vision model with strict JSON output."""
 
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         logger.warning("GEMINI_API_KEY not found. Skipping LLM extraction.")
-        return None
+        return None, None
 
     genai.configure(api_key=api_key)
 
@@ -149,7 +149,14 @@ Return only the JSON object.
         # Remove declared_total to match strict schema if needed (optional, but safer)
         data.pop("declared_total", None)
         
-        return data
+        # Extract token usage
+        usage = {
+            "total_tokens": response.usage_metadata.total_token_count,
+            "input_tokens": response.usage_metadata.prompt_token_count,
+            "output_tokens": response.usage_metadata.candidates_token_count
+        }
+        
+        return data, usage
 
     except Exception as e:
         logger.error("❌ LLM JSON parse failed.")

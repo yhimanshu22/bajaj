@@ -11,3 +11,4 @@ python-dotenv
 deepdiff
 streamlit
 Pillow
+importlib-metadata
