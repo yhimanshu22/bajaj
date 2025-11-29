@@ -4,6 +4,7 @@ import logging
 import sys
 import os
 from deepdiff import DeepDiff
+import time
 
 # Add parent directory to path to import app
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -49,8 +50,12 @@ def test_extraction(name, url, expected_data):
 
     payload = {"document": url}
 
+    start_time = time.time()
     try:
         response = requests.post(API_URL, json=payload)
+        elapsed = time.time() - start_time
+        logger.info(f"⏱️ Time taken: {elapsed:.2f}s")
+        
         response.raise_for_status()
         result = response.json()
 
