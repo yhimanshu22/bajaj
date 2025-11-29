@@ -48,7 +48,6 @@ def extract_with_llm(file_content: bytes, mime_type: str) -> Tuple[Optional[Dict
 
     genai.configure(api_key=api_key)
 
-    # model_name = 'gemini-2.5-pro'
     model_name = 'gemini-2.0-flash'
     logger.info(f"Using LLM model: {model_name}")
 
@@ -56,7 +55,8 @@ def extract_with_llm(file_content: bytes, mime_type: str) -> Tuple[Optional[Dict
         model_name,
         generation_config={
             "response_mime_type": "application/json",
-            "temperature": 0.0  # deterministic output
+            "temperature": 0.0,  # deterministic output
+            "max_output_tokens": 8192
         }
     )
 
