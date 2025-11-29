@@ -22,6 +22,10 @@ def sanitize_json(raw: str) -> str:
     raw = re.sub(r",\s*}", "}", raw)
     raw = re.sub(r",\s*]", "]", raw)
 
+    # Remove commas from numbers (e.g. 1,200.00 -> 1200.00)
+    # Look for digits, comma, digits
+    raw = re.sub(r'(\d),(\d)', r'\1\2', raw)
+
     # Replace single quotes with double quotes
     raw = re.sub(r"(?<!\\)'", "\"", raw)
 
