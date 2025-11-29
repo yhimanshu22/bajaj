@@ -67,9 +67,8 @@ STRICT RULES:
 6. If rate missing → use item_amount
 7. DO NOT modify values. DO NOT approximate.
 8. No comments. No explanations.
-9. FRAUD DETECTION: 
-   - Compare the "Total" printed on the bill with the sum of the line items. If they don't match, this is a MAJOR FRAUD SIGNAL.
-   - Look for inconsistent fonts, different ink colors, or signs of digital tampering/whitener.
+7. DO NOT modify values. DO NOT approximate.
+8. No comments. No explanations.
 
 OUTPUT FORMAT:
 
@@ -77,6 +76,7 @@ OUTPUT FORMAT:
   "pagewise_line_items": [
     {
       "page_no": "1",
+      "page_type": "Bill Detail | Final Bill | Pharmacy",
       "bill_items": [
         {
           "item_name": "",
@@ -87,13 +87,7 @@ OUTPUT FORMAT:
       ]
     }
   ],
-  "total_item_count": 0,
-  "reconciled_amount": 0.00,
-  "declared_total": 0.00,
-  "fraud_signals": {
-    "is_suspicious": false,
-    "warnings": []
-  }
+  "total_item_count": 0
 }
 
 Return only the JSON object.
@@ -117,37 +111,15 @@ Return only the JSON object.
         data = json.loads(raw)
         
         # Post-processing: Recalculate totals to ensure accuracy
-        calculated_total = 0.0
         calculated_count = 0
         
         if "pagewise_line_items" in data:
             for page in data["pagewise_line_items"]:
                 if "bill_items" in page:
                     for item in page["bill_items"]:
-                        amount = item.get("item_amount", 0.0)
-                        calculated_total += amount
                         calculated_count += 1
                         
-        # Fraud Check: Total Mismatch
-        declared_total = data.get("declared_total", 0.0)
-        
-        # Ensure fraud_signals dict exists
-        if "fraud_signals" not in data or data["fraud_signals"] is None:
-            data["fraud_signals"] = {"is_suspicious": False, "warnings": []}
-            
-        # Check for mismatch (tolerance of 1.0 for rounding differences)
-        if declared_total > 0 and abs(declared_total - calculated_total) > 1.0:
-            data["fraud_signals"]["is_suspicious"] = True
-            data["fraud_signals"]["warnings"].append(
-                f"Total Amount Mismatch: Bill says {declared_total}, but items sum to {round(calculated_total, 2)}"
-            )
-            
-        # Overwrite reconciled_amount with the CORRECT calculated sum
-        data["reconciled_amount"] = round(calculated_total, 2)
         data["total_item_count"] = calculated_count
-        
-        # Remove declared_total to match strict schema if needed (optional, but safer)
-        data.pop("declared_total", None)
         
         # Extract token usage
         usage = {

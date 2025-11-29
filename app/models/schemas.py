@@ -11,18 +11,14 @@ class BillItem(BaseModel):
 
 class PageLineItems(BaseModel):
     page_no: str = Field(..., description="Page number as string")
+    page_type: str = Field(..., description="Bill Detail | Final Bill | Pharmacy")
     bill_items: List[BillItem] = Field(..., description="List of extracted bill items")
 
 
-class FraudSignals(BaseModel):
-    is_suspicious: bool = Field(False, description="Whether fraud is suspected")
-    warnings: List[str] = Field([], description="List of fraud warnings (e.g. font mismatch)")
 
 class ExtractionData(BaseModel):
     pagewise_line_items: List[PageLineItems]
     total_item_count: int = Field(..., ge=0)
-    reconciled_amount: float = Field(..., ge=0)
-    fraud_signals: Optional[FraudSignals] = None
 
 
 class BillExtractionResponse(BaseModel):

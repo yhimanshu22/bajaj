@@ -38,7 +38,7 @@ def validate_response_structure(data):
     """
     Validate required keys exist for schema correctness.
     """
-    required_keys = ["pagewise_line_items", "total_item_count", "reconciled_amount"]
+    required_keys = ["pagewise_line_items", "total_item_count"]
     for key in required_keys:
         if key not in data:
             return False, f"Missing key: {key}"
@@ -76,11 +76,10 @@ def test_extraction(name, url, expected_data):
         extracted_count = data.get("total_item_count")
         expected_count = expected_data["data"]["total_item_count"]
 
-        extracted_total = round(data.get("reconciled_amount"), 2)
-        expected_total = round(expected_data["data"]["reconciled_amount"], 2)
+
 
         logger.info(f"📌 Count     → Expected: {expected_count} | Got: {extracted_count}")
-        logger.info(f"📌 Total Amt → Expected: {expected_total} | Got: {extracted_total}")
+
 
         # 3️⃣ Per-page items
         page_items = data.get("pagewise_line_items", [])
@@ -106,9 +105,8 @@ def test_extraction(name, url, expected_data):
 
         # 4️⃣ Final Pass/Fail
         count_match = extracted_count == expected_count
-        total_match = abs(extracted_total - expected_total) < 0.01
 
-        if count_match and total_match:
+        if count_match:
             logger.info(f"\n{name} PASSED ✅\n")
         else:
             logger.warning(f"\n{name} FAILED ❌ : Mismatch in count or total\n")
@@ -130,8 +128,7 @@ if __name__ == "__main__":
 
     sample_pharmacy_expected = {
         "data": {
-            "total_item_count": 4,
-            "reconciled_amount": 1699.84
+            "total_item_count": 4
         }
     }
 
@@ -146,8 +143,7 @@ if __name__ == "__main__":
 
     sample_hospital_large_expected = {
         "data": {
-            "total_item_count": 30,
-            "reconciled_amount": 21800.00
+            "total_item_count": 30
         }
     }
 
@@ -162,8 +158,7 @@ if __name__ == "__main__":
 
     sample_consultation_expected = {
         "data": {
-            "total_item_count": 12,
-            "reconciled_amount": 16390.00
+            "total_item_count": 12
         }
     }
 
