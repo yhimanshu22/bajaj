@@ -21,8 +21,15 @@ class ExtractionData(BaseModel):
     total_item_count: int = Field(..., ge=0)
 
 
+class TokenUsage(BaseModel):
+    total_tokens: int
+    input_tokens: int
+    output_tokens: int
+
+
 class BillExtractionResponse(BaseModel):
     is_success: bool
+    token_usage: TokenUsage
     data: ExtractionData
 
 
