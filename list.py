@@ -2,7 +2,7 @@ import google.generativeai as genai
 import os
 
 # 1. Setup API Key
-api_key = "AIzaSyCESwO709JbqKOfVzfkuMzVXu7mMnBHYdQ"
+api_key = ""
 genai.configure(api_key=api_key)
 
 print("--- Available Models (v1beta) ---")
