@@ -7,36 +7,29 @@ import re
 
 logger = logging.getLogger(__name__)
 
-
 def sanitize_json(raw: str) -> str:
     """Clean LLM JSON output for safe parsing."""
-
-    # Remove markdown blocks like ```json ... ```
+    # 1. Remove markdown blocks
     if raw.startswith("```"):
         raw = raw.strip("`")
-        raw = raw.replace("json", "", 1)
-
+        if raw.startswith("json"):
+            raw = raw[4:]
+    
     raw = raw.strip()
 
-    # Remove trailing commas in dicts/lists
+    # 2. Fix the specific "Double Double-Quote" issue from your logs
+    # Turns "COOMB""S" into "COOMB\"S"
+    # Matches "" that is NOT at the start/end of a JSON key/value
+    raw = raw.replace('""', '\\"')
+
+    # 3. Remove trailing commas (Safe)
     raw = re.sub(r",\s*}", "}", raw)
     raw = re.sub(r",\s*]", "]", raw)
 
-    # Remove commas from numbers (e.g. 1,200.00 -> 1200.00)
-    # Look for digits, comma, digits
-    raw = re.sub(r'(\d),(\d)', r'\1\2', raw)
-
-    # Replace single quotes with double quotes
-    raw = re.sub(r"(?<!\\)'", "\"", raw)
-
-    # Remove stray line breaks / tabs
+    # 4. Remove newlines/tabs for cleaner parsing
     raw = raw.replace("\n", " ").replace("\t", " ")
-
-    # Collapse multiple spaces
-    raw = re.sub(r"\s+", " ", raw)
-
+    
     return raw
-
 
 def extract_with_llm(file_content: bytes, mime_type: str) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, int]]]:
     """Extract bill data using Gemini Vision model with strict JSON output."""
@@ -48,15 +41,16 @@ def extract_with_llm(file_content: bytes, mime_type: str) -> Tuple[Optional[Dict
 
     genai.configure(api_key=api_key)
 
-    model_name = 'gemini-2.5-pro'
+    # FIXED: Correct model name
+    model_name = 'gemini-1.5-pro' 
     logger.info(f"Using LLM model: {model_name}")
 
     model = genai.GenerativeModel(
         model_name,
         generation_config={
             "response_mime_type": "application/json",
-            "temperature": 0.0,  # deterministic output
-            "max_output_tokens": 65536
+            "temperature": 0.0,
+            # "response_schema": ... # Optional: You can pass a typed schema here for even better results
         }
     )
 
@@ -64,27 +58,22 @@ def extract_with_llm(file_content: bytes, mime_type: str) -> Tuple[Optional[Dict
 You are an extraction engine.
 
 STRICT RULES:
-1. Output ONLY valid JSON. No text before or after. No markdown. No backticks.
-2. ALL JSON keys MUST use double quotes.
-3. DO NOT round numbers. Preserve the exact numeric values detected.
-4. item_amount MUST equal (item_rate × item_quantity) without rounding.
-5. If quantity missing → use 1.00
-6. If rate missing → use item_amount
-7. DO NOT modify values. DO NOT approximate.
-8. No comments. No explanations.
-7. DO NOT modify values. DO NOT approximate.
-8. No comments. No explanations.
+1. Output ONLY valid JSON.
+2. If the text contains double quotes, ESCAPE them with a backslash (e.g., \\").
+3. DO NOT round numbers. Preserve exact values.
+4. item_amount MUST equal (item_rate * item_quantity).
+5. If quantity missing -> use 1.0
+6. If rate missing -> use item_amount
 
 OUTPUT FORMAT:
-
 {
   "pagewise_line_items": [
     {
-      "page_no": "1",
+      "page_no": 1,
       "page_type": "Bill Detail | Final Bill | Pharmacy",
       "bill_items": [
         {
-          "item_name": "",
+          "item_name": "string",
           "item_amount": 0.00,
           "item_rate": 0.00,
           "item_quantity": 0.00
@@ -94,8 +83,6 @@ OUTPUT FORMAT:
   ],
   "total_item_count": 0
 }
-
-Return only the JSON object.
 """
 
     content = [
@@ -103,30 +90,25 @@ Return only the JSON object.
         prompt
     ]
 
-    response = model.generate_content(content)
-
-    raw = response.text or ""
-    raw = raw.strip()
-
-    # Clean the LLM output
-    raw = sanitize_json(raw)
-
-    # Final JSON parsing block
     try:
-        data = json.loads(raw)
+        response = model.generate_content(content)
+        raw = response.text or ""
         
-        # Post-processing: Recalculate totals to ensure accuracy
+        # Clean the LLM output
+        clean_raw = sanitize_json(raw)
+
+        # Parse
+        data = json.loads(clean_raw)
+        
+        # Post-processing: Recalculate totals
         calculated_count = 0
-        
         if "pagewise_line_items" in data:
             for page in data["pagewise_line_items"]:
                 if "bill_items" in page:
-                    for item in page["bill_items"]:
-                        calculated_count += 1
+                    calculated_count += len(page["bill_items"])
                         
         data["total_item_count"] = calculated_count
         
-        # Extract token usage
         usage = {
             "total_tokens": response.usage_metadata.total_token_count,
             "input_tokens": response.usage_metadata.prompt_token_count,
@@ -135,9 +117,13 @@ Return only the JSON object.
         
         return data, usage
 
-    except Exception as e:
-        logger.error("❌ LLM JSON parse failed.")
+    except json.JSONDecodeError as e:
+        logger.error(f"❌ JSON Parse Error: {e.msg}")
+        logger.error(f"Error at line {e.lineno} column {e.colno}")
         logger.error("---- RAW OUTPUT ----")
-        logger.error(raw)
+        logger.error(raw) 
         logger.error("--------------------")
+        raise e
+    except Exception as e:
+        logger.error(f"❌ General LLM Error: {str(e)}")
         raise e
