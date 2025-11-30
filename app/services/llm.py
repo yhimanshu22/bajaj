@@ -4,7 +4,11 @@ import json
 import logging
 from typing import Optional, Dict, Any, Tuple, List
 import re
+import time
 from app.utils.pdf import split_pdf
+import json_repair
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+from google.api_core import exceptions
 
 logger = logging.getLogger(__name__)
 
@@ -32,17 +36,28 @@ def sanitize_json(raw: str) -> str:
     return raw
 
 
+# Configure retry: Wait 2s, then 4s, then 8s... up to 5 times
+@retry(
+    retry=retry_if_exception_type(exceptions.ResourceExhausted),
+    wait=wait_exponential(multiplier=2, min=4, max=60),
+    stop=stop_after_attempt(5)
+)
+def call_gemini_safe(model, content):
+    """Call Gemini API with retry logic for quota exhaustion."""
+    return model.generate_content(content)
+
+
 def extract_page_1(content: bytes, mime_type: str) -> Tuple[Dict[str, Any], Dict[str, int]]:
     """Extract summary and metadata from Page 1 using Pro model."""
     api_key = os.environ.get("GEMINI_API_KEY")
     genai.configure(api_key=api_key)
     
     model = genai.GenerativeModel(
-        'gemini-2.5-flash',
+        'gemini-2.5-pro',
         generation_config={
             "response_mime_type": "application/json",
             "temperature": 0.0,
-            "max_output_tokens": 8192 # Page 1 shouldn't be huge
+            "max_output_tokens": 8192 
         }
     )
 
@@ -69,9 +84,11 @@ def extract_page_1(content: bytes, mime_type: str) -> Tuple[Dict[str, Any], Dict
     }
     """
     
-    response = model.generate_content([{'mime_type': mime_type, 'data': content}, prompt])
-    raw = sanitize_json(response.text)
-    data = json.loads(raw)
+    # Use safe call
+    response = call_gemini_safe(model, [{'mime_type': mime_type, 'data': content}, prompt])
+    
+    # Use json_repair for robust parsing
+    data = json_repair.loads(response.text)
     
     usage = {
         "total_tokens": response.usage_metadata.total_token_count,
@@ -86,6 +103,7 @@ def extract_line_items(content: bytes, mime_type: str, page_num: int) -> Tuple[L
     api_key = os.environ.get("GEMINI_API_KEY")
     genai.configure(api_key=api_key)
     
+    # Use gemini-2.0-flash as it is the stable Flash model
     model = genai.GenerativeModel(
         'gemini-2.0-flash',
         generation_config={
@@ -107,9 +125,11 @@ def extract_line_items(content: bytes, mime_type: str, page_num: int) -> Tuple[L
     ]
     """
     
-    response = model.generate_content([{'mime_type': mime_type, 'data': content}, prompt])
-    raw = sanitize_json(response.text)
-    data = json.loads(raw)
+    # Use safe call
+    response = call_gemini_safe(model, [{'mime_type': mime_type, 'data': content}, prompt])
+    
+    # Use json_repair for robust parsing
+    data = json_repair.loads(response.text)
     
     usage = {
         "total_tokens": response.usage_metadata.total_token_count,
@@ -154,6 +174,10 @@ def extract_with_llm(file_content: bytes, mime_type: str) -> Tuple[Optional[Dict
         if len(pages) > 1:
             for i, page_content in enumerate(pages[1:], start=2):
                 logger.info(f"Processing Page {i}...")
+                
+                # Rate Limit Delay: Sleep 2s between pages
+                time.sleep(2)
+                
                 try:
                     # For PDF split pages, they are still PDFs
                     p_mime = "application/pdf" if mime_type == "application/pdf" else mime_type
