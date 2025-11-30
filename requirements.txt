@@ -13,3 +13,4 @@ streamlit
 Pillow
 importlib-metadata
 pyngrok
+pypdf
