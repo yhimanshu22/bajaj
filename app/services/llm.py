@@ -38,7 +38,7 @@ def extract_page_1(content: bytes, mime_type: str) -> Tuple[Dict[str, Any], Dict
     genai.configure(api_key=api_key)
     
     model = genai.GenerativeModel(
-        'gemini-2.5-pro',
+        'gemini-2.5-flash',
         generation_config={
             "response_mime_type": "application/json",
             "temperature": 0.0,
