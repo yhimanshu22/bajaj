@@ -48,7 +48,7 @@ def extract_with_llm(file_content: bytes, mime_type: str) -> Tuple[Optional[Dict
 
     genai.configure(api_key=api_key)
 
-    model_name = 'gemini-1.5-flash'
+    model_name = 'gemini-2.5-pro'
     logger.info(f"Using LLM model: {model_name}")
 
     model = genai.GenerativeModel(
