@@ -1,3 +1,9 @@
+import sys
+if sys.version_info < (3, 10):
+    import importlib_metadata
+    import importlib.metadata
+    importlib.metadata.packages_distributions = importlib_metadata.packages_distributions
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body
 from app.models.schemas import BillExtractionResponse, BillExtractionRequest
 from app.services.llm import extract_with_llm

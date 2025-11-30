@@ -56,7 +56,7 @@ def extract_with_llm(file_content: bytes, mime_type: str) -> Tuple[Optional[Dict
         generation_config={
             "response_mime_type": "application/json",
             "temperature": 0.0,  # deterministic output
-            "max_output_tokens": 8192
+            "max_output_tokens": 65536
         }
     )
 
