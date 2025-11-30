@@ -224,7 +224,7 @@ def extract_with_llm(file_content: bytes, mime_type: str) -> Tuple[Optional[Dict
             "category_summary": summary_data.get("category_summary", [])
         }
         
-        # 5. Validation (Optional logging)
+       
         net_amount = summary_data.get("metadata", {}).get("net_amount", 0.0)
         total_extracted = sum(item.get("item_amount", 0) for item in all_line_items)
         logger.info(f"Validation: Net Amount ({net_amount}) vs Extracted Total ({total_extracted})")
